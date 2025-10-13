@@ -25,7 +25,7 @@ def find_matches(table, title):
     if matches.empty:
         return None
     else:
-        return matches[['Title', 'Title Type', 'Year', 'Genres']]
+        return matches[['Title', 'Title Type', 'Year', 'Genres']].astype({'Year': 'int'}).to_string(index=False)
 
 def main():
     print("Loading watchlist...")

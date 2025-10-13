@@ -27,6 +27,16 @@ def find_matches(table, title):
     else:
         return matches[['Title', 'Title Type', 'Year', 'Genres']].astype({'Year': 'int'}).to_string(index=False)
 
+def get_random_selection(table, genre = None, series = False):
+    if series:
+        table = table[table['Title Type'].str.contains('Series', case=True, na=False)]
+
+    matches = table[table['Genres'].str.contains(genre, case=False, na=False)] if genre else table
+    if matches.empty:
+        return None
+    selection = matches.sample(n=1).iloc[0]
+    return f"{selection['Title']} ({int(selection['Year'])}) - {selection['Genres']} - ({selection['Title Type']})"
+
 def main():
     print("Loading watchlist...")
     table = load_watchlist("watchlist.csv")
@@ -34,6 +44,9 @@ def main():
     matches = find_matches(table, "simpsons")
     print("Matches found:")
     print(matches)
+    print("\nGetting random selection...")
+    movie = get_random_selection(table, "comedy", series=True)
+    print("Random selection:", movie)
 
 if __name__ == "__main__":
     print("Loading...")

@@ -1,6 +1,8 @@
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, messagebox
 import tkinter.font as tkfont
+import pandas as pd
+from main import load_watchlist, find_matches
 
 class MovieSelectorGUI:
     def __init__(self, root):
@@ -66,16 +68,51 @@ class MovieSelectorGUI:
         self.font = tkfont.nametofont(treeview_font)
 
     def load_watchlist(self):
-        return
+        try:
+            self.table = load_watchlist()
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to load watchlist: {e}")
+            self.table = None
 
     def treeview_sort_column(self, col, reverse):
         return
 
     def update_table(self, table):
-        return
+        for row in self.tree.get_children():
+            self.tree.delete(row)
+
+        if table is not None or not table.empty:
+            if isinstance(table, pd.DataFrame):
+                for _, row in table.iterrows():
+                    self.tree.insert("", "end", values=tuple(row))
+            else:
+                entry = [table[col] for col in self.columns]
+                self.tree.insert("", "end", values=tuple(entry))
+
+            # Adjust column widths
+            for col in self.columns:
+                max_width = self.font.measure(col)
+                for item in self.tree.get_children():
+                    cell_value = str(self.tree.set(item, col))
+                    cell_width = self.font.measure(cell_value)
+                    if cell_width > max_width:
+                        max_width = cell_width
+                width = max_width + 20
+                self.tree.column(col, minwidth=width, width=width)
+        else:
+            messagebox.showinfo("No entries", "No entry found.")
 
     def search_movie(self):
-        return
+        if self.table is None:
+            messagebox.showwarning("Warning", "Please load the watchlist first.")
+            return
+        title = self.search_entry.get()
+        if not title:
+            messagebox.showinfo("Info", "Enter a title to search.")
+            return
+        
+        matches = find_matches(self.table, title)
+        self.update_table(matches)
 
     def select_random(self):
         return

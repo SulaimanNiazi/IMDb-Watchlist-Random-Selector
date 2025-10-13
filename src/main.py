@@ -1,16 +1,24 @@
 import pandas as pd
 import os
 
+def get_csv_files(path = '.', files = []):
+    if os.path.isdir(path):
+        for subPath in os.listdir(path):
+            if not subPath.startswith('.'):
+                newFiles = get_csv_files(os.path.join(path, subPath), files)
+                if newFiles is not None and newFiles != files: 
+                    files.extend(newFiles)
+    elif path.endswith('.csv'):
+        abspath = os.path.abspath(path)
+        if abspath not in files:
+            files.append(abspath)
+    return files
+
 def load_watchlist(file_path):
-    if not file_path.endswith('.csv'):
-        raise ValueError("File must be a CSV.")
-    try:
-        return pd.read_csv(file_path)
-    except Exception:
-        try:
-            return pd.read_csv(os.path.join('src', file_path))
-        except Exception:
-            raise FileNotFoundError("File not found or is not accessable.")
+    paths = get_csv_files()
+    if paths:
+        return pd.read_csv(paths[0])
+    raise FileNotFoundError("File not found or is not accessable.")
 
 def find_matches(table, title):
     matches = table[table['Title'].str.contains(title, case=False, na=False)]
@@ -20,10 +28,14 @@ def find_matches(table, title):
         return matches[['Title', 'Title Type', 'Year', 'Genres']]
 
 def main():
+    print("Loading watchlist...")
     table = load_watchlist("watchlist.csv")
+    print("Watchlist loaded.\n\nFinding matches...")
     matches = find_matches(table, "simpsons")
+    print("Matches found:")
     print(matches)
 
 if __name__ == "__main__":
+    print("Loading...")
     os.system('cls' if os.name == 'nt' else 'clear')
     main()

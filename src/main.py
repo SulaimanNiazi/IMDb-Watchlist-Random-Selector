@@ -25,19 +25,20 @@ def find_matches(table, title):
     if matches.empty:
         return None
     else:
-        return matches[['Title', 'Title Type', 'Year', 'Genres']].astype({'Year': 'int'}).to_string(index=False)
+        table = matches[['Title', 'Title Type', 'Year', 'Genres']].astype({'Year': 'string'})
+        table['Year'] = table['Year'].str.replace('.0', '', regex=False)
+        return table.to_string(index=False)
 
 def get_random_selection(table, genre = None, series = False):
-    if series:
-        table = table[table['Title Type'].str.contains('Series', case=True, na=False)]
-    else:
-        table = table[~table['Title Type'].str.contains('Series', case=True, na=False)]
+    seriesCol = table['Title Type'].str.contains('Series', case=True, na=False)
+    table = table[seriesCol if series else ~seriesCol]
 
     matches = table[table['Genres'].str.contains(genre, case=False, na=False)] if genre else table
     if matches.empty:
         return None
     selection = matches.sample(n=1).iloc[0]
-    return f"{selection['Title']} ({int(selection['Year'])}) - {selection['Genres']} - ({selection['Title Type']})"
+    year = f"{int(0 + selection['Year'])}" if pd.notna(selection['Year']) else "N/A"
+    return f"{selection['Title']} ({year}) - {selection['Genres']} - ({selection['Title Type']})"
 
 def main():
     print("Loading watchlist...")

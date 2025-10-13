@@ -25,33 +25,31 @@ def find_matches(table, title):
     if matches.empty:
         return None
     else:
-        table = matches[['Title', 'Title Type', 'Year', 'Genres']].astype({'Year': 'string'})
-        table['Year'] = table['Year'].str.replace('.0', '', regex=False)
-        return table.to_string(index=False)
+        matches = matches[['Title', 'Title Type', 'Year', 'Genres']].astype({'Year': 'string'}).fillna('N/A').sort_values(by=['Title Type', 'Title'])
+        matches['Year'] = matches['Year'].str.replace('.0', '', regex=False)
+        return matches
 
 def get_random_selection(table, genre = None, series = False):
-    seriesCol = table['Title Type'].str.contains('Series', case=True, na=False)
-    table = table[seriesCol if series else ~seriesCol]
-
+    table = table[~table['Year'].isna()] # Remove upcoming entries
+    allSeries = table['Title Type'].str.contains('Series', case=True, na=False)
+    table = table[allSeries if series else ~allSeries]
     matches = table[table['Genres'].str.contains(genre, case=False, na=False)] if genre else table
     if matches.empty:
         return None
-    selection = matches.sample(n=1).iloc[0]
-    year = f"{int(0 + selection['Year'])}" if pd.notna(selection['Year']) else "N/A"
-    return f"{selection['Title']} ({year}) - {selection['Genres']} - ({selection['Title Type']})"
-
-def main():
-    print("Loading watchlist...")
-    table = load_watchlist()
-    print("Watchlist loaded.\n\nFinding matches...")
-    matches = find_matches(table, "simpsons")
-    print("Matches found:")
-    print(matches)
-    print("\nGetting random selection...")
-    movie = get_random_selection(table, "comedy", series=False)
-    print("Random selection:", movie)
+    selection = matches.astype({'Year': 'string'}).sample(n=1).iloc[0].fillna('N/A')
+    selection['Year'] = selection['Year'][:-2]
+    return selection
 
 if __name__ == "__main__":
     print("Loading...")
     os.system('cls' if os.name == 'nt' else 'clear')
-    main()
+    
+    print("Loading watchlist...")
+    table = load_watchlist()
+    print("Watchlist loaded.\n\nFinding matches...")
+    matches = find_matches(table, "the")
+    print("Matches found:")
+    print(matches)
+    print("\nGetting random selection...")
+    selection = get_random_selection(table, "comedy", series=False)
+    print(f"Random selection:\n{selection['Title']} ({selection['Year']}) - {selection['Genres']} - ({selection['Title Type']})")

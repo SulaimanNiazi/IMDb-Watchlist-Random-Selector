@@ -1,7 +1,7 @@
 import pandas as pd
 import os
 
-def get_csv_files(path = '.', files = []):
+def get_csv_files(path, files = []):
     if os.path.isdir(path):
         for subPath in os.listdir(path):
             if not subPath.startswith('.'):
@@ -14,8 +14,8 @@ def get_csv_files(path = '.', files = []):
             files.append(abspath)
     return files
 
-def load_watchlist(file_path):
-    paths = get_csv_files()
+def load_watchlist(file_path='.'):
+    paths = get_csv_files(file_path)
     if paths:
         return pd.read_csv(paths[0])
     raise FileNotFoundError("File not found or is not accessable.")
@@ -39,7 +39,7 @@ def get_random_selection(table, genre = None, series = False):
 
 def main():
     print("Loading watchlist...")
-    table = load_watchlist("watchlist.csv")
+    table = load_watchlist()
     print("Watchlist loaded.\n\nFinding matches...")
     matches = find_matches(table, "simpsons")
     print("Matches found:")

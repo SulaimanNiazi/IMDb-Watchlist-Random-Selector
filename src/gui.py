@@ -55,7 +55,7 @@ class MovieSelectorGUI:
             xscrollcommand=self.tree_scroll_x.set
         )
         for col in self.columns:
-            self.tree.heading(col, text=col)
+            self.tree.heading(col, text=col, command=lambda c=col: self.sort_table(c, False))
             self.tree.column(col, anchor = "w")
         self.tree.grid(row=0, column=0, sticky="nsew")
         self.tree_scroll_y.config(command=self.tree.yview)
@@ -74,20 +74,25 @@ class MovieSelectorGUI:
             messagebox.showerror("Error", f"Failed to load watchlist: {e}")
             self.table = None
 
-    def treeview_sort_column(self, col, reverse):
-        return
+    def sort_table(self, col, reverse):
+        data = [(self.tree.set(k, col), k) for k in self.tree.get_children('')]
+        try:
+            data.sort(key=lambda t: float(t[0]), reverse=reverse)
+        except ValueError:
+            data.sort(key=lambda t: t[0].lower(), reverse=reverse)
+        for index, (val, k) in enumerate(data):
+            self.tree.move(k, '', index)
+        self.tree.heading(col, command=lambda: self.sort_table(col, not reverse))
 
     def update_table(self, table):
         for row in self.tree.get_children():
             self.tree.delete(row)
 
-        if table is not None or not table.empty:
-            if isinstance(table, pd.DataFrame):
-                for _, row in table.iterrows():
-                    self.tree.insert("", "end", values=tuple(row))
-            else:
-                entry = [table[col] for col in self.columns]
-                self.tree.insert("", "end", values=tuple(entry))
+        table = pd.DataFrame(table) if table is not None else None
+
+        if table is not None:
+            for _, row in table.iterrows():
+                self.tree.insert("", "end", values=tuple(row))
 
             # Adjust column widths
             for col in self.columns:

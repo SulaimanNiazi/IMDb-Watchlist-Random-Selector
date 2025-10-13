@@ -9,6 +9,7 @@ class MovieSelectorGUI:
         self.root = root
         self.root.title("Watchlist Movie Selector")
         self.columns = ("Title", "Title Type", "Year", "Genres")
+        self.genres = ["Any"]
         self.table = None
 
         # Make the grid expand with window
@@ -17,8 +18,6 @@ class MovieSelectorGUI:
         for i in range(5):
             self.root.rowconfigure(i, weight=1)
         self.root.minsize(700, 400)
-
-        self.load_watchlist()
 
         # Search section
         ttk.Label(root, text="Search Title:").grid(row=1, column=0, padx=10, sticky="ew")
@@ -30,8 +29,11 @@ class MovieSelectorGUI:
 
         # Random selection section
         ttk.Label(root, text="Genre:").grid(row=2, column=0, padx=10, sticky="ew")
-        self.genre_entry = ttk.Entry(root)
-        self.genre_entry.grid(row=2, column=1, padx=10, sticky="ew")
+        self.genre_var = tk.StringVar()
+        self.genre_var.set("Any") # default
+        self.genre_combo = ttk.Combobox(root, textvariable=self.genre_var, values=self.genres, state="readonly")
+        self.genre_combo.grid(row=2, column=1, padx=10, sticky="ew")
+
         self.series_var = tk.BooleanVar()
         self.series_check = ttk.Checkbutton(root, text="Series", variable=self.series_var)
         self.series_check.grid(row=2, column=2, padx=10, sticky="ew")
@@ -67,9 +69,18 @@ class MovieSelectorGUI:
             treeview_font = "TkDefaultFont"
         self.font = tkfont.nametofont(treeview_font)
 
+        self.load_watchlist()
+
     def load_watchlist(self):
         try:
             self.table = load_watchlist()
+            genre_set = set()
+            for genres in self.table['Genres'].dropna().unique():
+                for genre in map(str.strip, genres.split(',')):
+                    if genre not in genre_set:
+                        genre_set.add(genre)
+            self.genres = ["Any"] + sorted(genre_set)
+            self.genre_combo['values'] = self.genres
         except Exception as e:
             messagebox.showerror("Error", f"Failed to load watchlist: {e}")
             self.table = None
@@ -124,9 +135,9 @@ class MovieSelectorGUI:
         if self.table is None:
             messagebox.showwarning("Warning", "Please load the watchlist first.")
             return
-        genre = self.genre_entry.get()
+        genre = self.genre_var.get()
         series = self.series_var.get()
-        result = get_random_selection(self.table, genre if genre else None, series)
+        result = get_random_selection(self.table, genre if genre != "Any" else None, series)
         self.update_table(result)
 
 if __name__ == "__main__":

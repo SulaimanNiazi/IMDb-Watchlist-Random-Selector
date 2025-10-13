@@ -30,6 +30,8 @@ def find_matches(table, title):
 def get_random_selection(table, genre = None, series = False):
     if series:
         table = table[table['Title Type'].str.contains('Series', case=True, na=False)]
+    else:
+        table = table[~table['Title Type'].str.contains('Series', case=True, na=False)]
 
     matches = table[table['Genres'].str.contains(genre, case=False, na=False)] if genre else table
     if matches.empty:
@@ -45,7 +47,7 @@ def main():
     print("Matches found:")
     print(matches)
     print("\nGetting random selection...")
-    movie = get_random_selection(table, "comedy", series=True)
+    movie = get_random_selection(table, "comedy", series=False)
     print("Random selection:", movie)
 
 if __name__ == "__main__":

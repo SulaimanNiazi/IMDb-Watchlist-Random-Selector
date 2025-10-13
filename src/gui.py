@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import tkinter.font as tkfont
 import pandas as pd
-from main import load_watchlist, find_matches
+from main import load_watchlist, find_matches, get_random_selection
 
 class MovieSelectorGUI:
     def __init__(self, root):
@@ -88,7 +88,8 @@ class MovieSelectorGUI:
         for row in self.tree.get_children():
             self.tree.delete(row)
 
-        table = pd.DataFrame(table) if table is not None else None
+        if isinstance(table, pd.Series):
+            table = pd.DataFrame([table[self.columns[i]] for i in range(len(self.columns))]).T
 
         if table is not None:
             for _, row in table.iterrows():
@@ -120,7 +121,13 @@ class MovieSelectorGUI:
         self.update_table(matches)
 
     def select_random(self):
-        return
+        if self.table is None:
+            messagebox.showwarning("Warning", "Please load the watchlist first.")
+            return
+        genre = self.genre_entry.get()
+        series = self.series_var.get()
+        result = get_random_selection(self.table, genre if genre else None, series)
+        self.update_table(result)
 
 if __name__ == "__main__":
     root = tk.Tk()

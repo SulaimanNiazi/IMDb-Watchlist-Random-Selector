@@ -37,7 +37,7 @@ class MovieSelectorGUI:
         self.series_var = tk.BooleanVar()
         self.series_check = ttk.Checkbutton(root, text="Series", variable=self.series_var)
         self.series_check.grid(row=2, column=2, padx=10, sticky="ew")
-        self.random_btn = ttk.Button(root, text="Select Random", command=self.select_random)
+        self.random_btn = ttk.Button(root, text="Select Random to Watch", command=self.select_random)
         self.random_btn.grid(row=2, column=3, padx=10, sticky="ew")
 
         # Table output (Treeview) with scrollbars
@@ -70,6 +70,7 @@ class MovieSelectorGUI:
         self.font = tkfont.nametofont(treeview_font)
 
         self.load_watchlist()
+        self.search_movie()
 
     def get_csv_files(self, path='.', files = []):
         if os.path.isdir(path):
@@ -107,10 +108,15 @@ class MovieSelectorGUI:
         allSeries = self.table['Title Type'].str.contains('Series', case=True, na=False)
         series = self.series_var.get()
         table = self.table[allSeries if series else ~allSeries]
+        
         genre = self.genre_var.get()
         if genre != "Any":
             table = table[table['Genres'].str.contains(genre, case=False, na=False)]
-        table = table[[self.columns[i] for i in range(len(self.columns))]].astype({'Year': 'string'}).fillna('N/A').sort_values(by=['Title Type', 'Title'])
+        
+        table = table[[self.columns[i] for i in range(len(self.columns))]].astype({'Year': 'string'}).fillna('N/A').assign(
+            # place titles that start with a bracket at the beginning and sort the rest alphabetically
+            SortKey=table['Title'].str.startswith(('[', ']', '(', ')', '{', '}')).map({True: 0, False: 1})
+        ).sort_values(by=['SortKey', 'Title']).drop(columns=['SortKey'])
         table['Year'] = table['Year'].str.replace('.0', '', regex=False)
         return table
 
@@ -139,18 +145,18 @@ class MovieSelectorGUI:
         if self.table is None:
             messagebox.showwarning("Warning", "Please load the watchlist first.")
             return
-        title = self.search_entry.get()
-        if not title:
-            messagebox.showinfo("Info", "Enter a title to search.")
-            return
-
+        
         matches = self.get_filtered_table()
-        self.update_table(matches[matches['Title'].str.contains(title, case=False, na=False)])
+        title = self.search_entry.get()
+        if title:
+            matches = matches[matches['Title'].str.contains(title, case=False, na=False)]
+        self.update_table(matches)
 
     def select_random(self):
         if self.table is None:
             messagebox.showwarning("Warning", "Please load the watchlist first.")
             return
+        
         filtered_table = self.get_filtered_table()
         # Remove upcoming movies or series
         filtered_table = filtered_table[~filtered_table['Year'].str.contains('N/A', case=True, na=False)]

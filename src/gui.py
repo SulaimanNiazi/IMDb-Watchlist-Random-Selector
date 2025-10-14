@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import tkinter.font as tkfont
 import pandas as pd
-from main import load_watchlist, get_random_selection
+from main import load_watchlist
 
 class MovieSelectorGUI:
     def __init__(self, root):
@@ -143,10 +143,10 @@ class MovieSelectorGUI:
         if self.table is None:
             messagebox.showwarning("Warning", "Please load the watchlist first.")
             return
-        genre = self.genre_var.get()
-        series = self.series_var.get()
-        result = get_random_selection(self.table, genre if genre != "Any" else None, series)
-        self.update_table(result)
+        filtered_table = self.get_filtered_table()
+        selection = filtered_table[~filtered_table['Year'].isna()].astype({'Year': 'string'}).sample(n=1).iloc[0].fillna('N/A')
+        selection['Year'] = selection['Year'][:-2]
+        self.update_table(selection)
 
 if __name__ == "__main__":
     root = tk.Tk()

@@ -110,20 +110,15 @@ class MovieSelectorGUI:
         genre = self.genre_var.get()
         if genre != "Any":
             table = table[table['Genres'].str.contains(genre, case=False, na=False)]
+        table = table[[self.columns[i] for i in range(len(self.columns))]].astype({'Year': 'string'}).fillna('N/A').sort_values(by=['Title Type', 'Title'])
+        table['Year'] = table['Year'].str.replace('.0', '', regex=False)
         return table
 
     def update_table(self, table):
         for row in self.tree.get_children():
             self.tree.delete(row)
 
-        if isinstance(table, pd.Series):
-            # Convert Series to DataFrame and order columns
-            table = pd.DataFrame([table[self.columns[i]] for i in range(len(self.columns))]).T
-        elif isinstance(table, pd.DataFrame):
-            if table.empty:
-                table = None
-
-        if table is not None:
+        if not table.empty:
             for _, row in table.iterrows():
                 self.tree.insert("", "end", values=tuple(row))
 
@@ -150,21 +145,22 @@ class MovieSelectorGUI:
             return
 
         matches = self.get_filtered_table()
-        matches = matches[matches['Title'].str.contains(title, case=False, na=False)]
-
-        matches = matches[['Title', 'Title Type', 'Year', 'Genres']].astype({'Year': 'string'}).fillna('N/A').sort_values(by=['Title Type', 'Title'])
-        matches['Year'] = matches['Year'].str.replace('.0', '', regex=False)
-
-        self.update_table(matches)
+        self.update_table(matches[matches['Title'].str.contains(title, case=False, na=False)])
 
     def select_random(self):
         if self.table is None:
             messagebox.showwarning("Warning", "Please load the watchlist first.")
             return
         filtered_table = self.get_filtered_table()
-        selection = filtered_table[~filtered_table['Year'].isna()].astype({'Year': 'string'}).sample(n=1).iloc[0].fillna('N/A')
-        selection['Year'] = selection['Year'][:-2]
-        self.update_table(selection)
+        # Remove upcoming movies or series
+        filtered_table = filtered_table[~filtered_table['Year'].str.contains('N/A', case=True, na=False)]
+        
+        if not filtered_table.empty:
+            selection = filtered_table.sample(n=1).iloc[0]
+            # Convert Series to DataFrame and order columns before updating the table
+            self.update_table(pd.DataFrame([selection], columns=self.columns))
+        else:
+            self.update_table(filtered_table)
 
 if __name__ == "__main__":
     root = tk.Tk()

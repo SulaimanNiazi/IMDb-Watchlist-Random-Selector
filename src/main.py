@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk, messagebox, filedialog
 import tkinter.font as tkfont
 import pandas as pd
 import os
@@ -14,8 +14,10 @@ class MovieSelectorGUI:
         # Responsive grid
         for i in range(4):
             self.root.columnconfigure(i, weight=1)
-        for i in range(5):
+        for i in range(2):
             self.root.rowconfigure(i, weight=1)
+        self.root.columnconfigure(1, weight=10)
+        self.root.rowconfigure(3, weight=30)
         self.root.minsize(700, 400)
 
         # Search section
@@ -24,7 +26,7 @@ class MovieSelectorGUI:
         self.search_entry.grid(row=1, column=1, padx=10, sticky="ew")
         self.search_entry.bind("<Return>", lambda event: self.search_movie())
         self.search_btn = ttk.Button(root, text="Search", command=self.search_movie)
-        self.search_btn.grid(row=1, column=2, padx=10, sticky="ew")
+        self.search_btn.grid(row=1, column=2, columnspan=2, padx=10, sticky="ew")
 
         # Genre dropdown
         ttk.Label(root, text="Genre:").grid(row=2, column=0, padx=10, sticky="ew")
@@ -38,24 +40,23 @@ class MovieSelectorGUI:
                 self.series_var.set(True) if movies else self.movies_var.set(True)
         
         self.series_var = tk.BooleanVar(value=True)
-        self.series_check = ttk.Checkbutton(root, text="Series", 
-                                            variable=self.series_var, 
-                                            command=lambda: ensure_selection(False))
-        self.series_check.grid(row=2, column=2, padx=10, sticky="e")
+        self.series_check = ttk.Checkbutton(root, text="Series", variable=self.series_var, command=lambda:ensure_selection(False))
+        self.series_check.grid(row=2, column=2, padx=10, sticky="ew")
 
         self.movies_var = tk.BooleanVar(value=True)
-        self.movies_check = ttk.Checkbutton(root, text="Movies", 
-                                            variable=self.movies_var,
-                                            command=lambda: ensure_selection(True))
-        self.movies_check.grid(row=2, column=2, padx=10, sticky="w")
+        self.movies_check = ttk.Checkbutton(root, text="Movies", variable=self.movies_var, command=lambda:ensure_selection(True))
+        self.movies_check.grid(row=2, column=3, padx=10, sticky="ew")
 
-        # Random select button
+        # Load New Watchlist and Select Random to Watch buttons
+        self.random_btn = ttk.Button(root, text="Load New Watchlist", command=lambda:self.load_watchlist(auto=False))
+        self.random_btn.grid(row=1, column=4, padx=10, sticky="ew")
+
         self.random_btn = ttk.Button(root, text="Select Random to Watch", command=self.select_random)
-        self.random_btn.grid(row=2, column=3, padx=10, sticky="ew")
+        self.random_btn.grid(row=2, column=4, padx=10, sticky="ew")
 
         # Table output
         self.tree_frame = ttk.Frame(root)
-        self.tree_frame.grid(row=3, column=0, columnspan=4, padx=10, pady=10, sticky="nsew")
+        self.tree_frame.grid(row=3, column=0, columnspan=5, padx=10, pady=10, sticky="nsew")
         self.tree_frame.rowconfigure(0, weight=1)
         self.tree_frame.columnconfigure(0, weight=1)
         self.tree_scroll_y = ttk.Scrollbar(self.tree_frame, orient="vertical")
@@ -63,11 +64,8 @@ class MovieSelectorGUI:
         self.tree_scroll_x = ttk.Scrollbar(self.tree_frame, orient="horizontal")
         self.tree_scroll_x.grid(row=1, column=0, sticky="ew")
         self.tree = ttk.Treeview(
-            self.tree_frame,
-            columns=self.columns,
-            show="headings",
-            yscrollcommand=self.tree_scroll_y.set,
-            xscrollcommand=self.tree_scroll_x.set
+            self.tree_frame, columns=self.columns, show="headings", 
+            yscrollcommand=self.tree_scroll_y.set, xscrollcommand=self.tree_scroll_x.set
         )
         for col in self.columns:
             self.tree.heading(col, text=col)
@@ -82,7 +80,6 @@ class MovieSelectorGUI:
         self.font = tkfont.nametofont(treeview_font)
 
         self.load_watchlist()
-        self.search_movie()
 
     def get_csv_files(self, path='.', files=[]):
         if os.path.isdir(path):
@@ -97,22 +94,29 @@ class MovieSelectorGUI:
                 files.append(abspath)
         return files
 
-    def load_watchlist(self):
+    def load_watchlist(self, auto=True):
         try:
-            paths = self.get_csv_files()
+            paths = self.get_csv_files() if auto else [filedialog.askopenfilename(
+                title="Select Watchlist CSV", filetypes=[("CSV Files", "*.csv")], initialdir="."
+            )]
+
             if not paths:
                 raise FileNotFoundError("No CSV file found.")
             self.table = pd.read_csv(paths[0])
+            self.search_movie()
         except Exception as e:
-            messagebox.showerror("Error", f"Failed to load watchlist: {e}")
             self.table = None
+            self.tree.delete(*self.tree.get_children())
+            messagebox.showerror("Error", f"Failed to load watchlist: {e}")
+            if not auto:
+                messagebox.showinfo("Retrying...", "Attempting to find nearest .csv file")
+                self.load_watchlist()
             return
 
         # Extract unique genres
-        genres = pd.Series(
-            [g.strip() for sublist in self.table['Genres'].dropna().str.split(',') for g in sublist]
-        ).unique()
-        self.genres = ["Any"] + sorted(genres)
+        self.genres = ["Any"] + sorted(
+            pd.Series([g.strip() for sublist in self.table['Genres'].dropna().str.split(',') for g in sublist]).unique()
+        )
         self.genre_combo['values'] = self.genres
 
     def get_filtered_table(self):

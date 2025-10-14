@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import tkinter.font as tkfont
 import pandas as pd
-from main import load_watchlist, find_matches, get_random_selection
+from main import load_watchlist, get_random_selection
 
 class MovieSelectorGUI:
     def __init__(self, root):
@@ -57,7 +57,7 @@ class MovieSelectorGUI:
             xscrollcommand=self.tree_scroll_x.set
         )
         for col in self.columns:
-            self.tree.heading(col, text=col, command=lambda c=col: self.sort_table(c, False))
+            self.tree.heading(col, text=col)
             self.tree.column(col, anchor = "w")
         self.tree.grid(row=0, column=0, sticky="nsew")
         self.tree_scroll_y.config(command=self.tree.yview)
@@ -85,22 +85,25 @@ class MovieSelectorGUI:
             messagebox.showerror("Error", f"Failed to load watchlist: {e}")
             self.table = None
 
-    def sort_table(self, col, reverse):
-        data = [(self.tree.set(k, col), k) for k in self.tree.get_children('')]
-        try:
-            data.sort(key=lambda t: float(t[0]), reverse=reverse)
-        except ValueError:
-            data.sort(key=lambda t: t[0].lower(), reverse=reverse)
-        for index, (val, k) in enumerate(data):
-            self.tree.move(k, '', index)
-        self.tree.heading(col, command=lambda: self.sort_table(col, not reverse))
+    def get_filtered_table(self):
+        allSeries = self.table['Title Type'].str.contains('Series', case=True, na=False)
+        series = self.series_var.get()
+        table = self.table[allSeries if series else ~allSeries]
+        genre = self.genre_var.get()
+        if genre != "Any":
+            table = table[table['Genres'].str.contains(genre, case=False, na=False)]
+        return table
 
     def update_table(self, table):
         for row in self.tree.get_children():
             self.tree.delete(row)
 
         if isinstance(table, pd.Series):
+            # Convert Series to DataFrame and order columns
             table = pd.DataFrame([table[self.columns[i]] for i in range(len(self.columns))]).T
+        elif isinstance(table, pd.DataFrame):
+            if table.empty:
+                table = None
 
         if table is not None:
             for _, row in table.iterrows():
@@ -117,7 +120,7 @@ class MovieSelectorGUI:
                 width = max_width + 20
                 self.tree.column(col, minwidth=width, width=width)
         else:
-            messagebox.showinfo("No entries", "No entry found.")
+            messagebox.showinfo("No Entries Found", "Try a different search or genre.")
 
     def search_movie(self):
         if self.table is None:
@@ -127,8 +130,13 @@ class MovieSelectorGUI:
         if not title:
             messagebox.showinfo("Info", "Enter a title to search.")
             return
-        
-        matches = find_matches(self.table, title)
+
+        matches = self.get_filtered_table()
+        matches = matches[matches['Title'].str.contains(title, case=False, na=False)]
+
+        matches = matches[['Title', 'Title Type', 'Year', 'Genres']].astype({'Year': 'string'}).fillna('N/A').sort_values(by=['Title Type', 'Title'])
+        matches['Year'] = matches['Year'].str.replace('.0', '', regex=False)
+
         self.update_table(matches)
 
     def select_random(self):

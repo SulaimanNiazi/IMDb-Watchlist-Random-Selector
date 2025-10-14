@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import tkinter.font as tkfont
 import pandas as pd
-from main import load_watchlist
+import os
 
 class MovieSelectorGUI:
     def __init__(self, root):
@@ -71,9 +71,27 @@ class MovieSelectorGUI:
 
         self.load_watchlist()
 
+    def get_csv_files(self, path='.', files = []):
+        if os.path.isdir(path):
+            for subPath in os.listdir(path):
+                if not subPath.startswith('.'):
+                    newFiles = self.get_csv_files(os.path.join(path, subPath), files)
+                    if newFiles is not None and newFiles != files: 
+                        files.extend(newFiles)
+        elif path.endswith('.csv'):
+            abspath = os.path.abspath(path)
+            if abspath not in files:
+                files.append(abspath)
+        return files
+
     def load_watchlist(self):
         try:
-            self.table = load_watchlist()
+            paths = self.get_csv_files()
+            if paths:
+                self.table = pd.read_csv(paths[0])
+            else:
+                raise FileNotFoundError("File not found or is not accessible.")
+            
             genre_set = set()
             for genres in self.table['Genres'].dropna().unique():
                 for genre in map(str.strip, genres.split(',')):

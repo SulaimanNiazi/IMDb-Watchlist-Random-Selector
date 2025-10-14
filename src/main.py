@@ -32,10 +32,24 @@ class MovieSelectorGUI:
         self.genre_combo = ttk.Combobox(root, textvariable=self.genre_var, state="readonly")
         self.genre_combo.grid(row=2, column=1, padx=10, sticky="ew")
 
-        # Series checkbox and random button
-        self.series_var = tk.BooleanVar()
-        self.series_check = ttk.Checkbutton(root, text="Series", variable=self.series_var)
-        self.series_check.grid(row=2, column=2, padx=10, sticky="ew")
+        # Series and Movie checkboxes
+        def ensure_selection(movies = True):
+            if not self.series_var.get() and not self.movies_var.get():
+                self.series_var.set(True) if movies else self.movies_var.set(True)
+        
+        self.series_var = tk.BooleanVar(value=True)
+        self.series_check = ttk.Checkbutton(root, text="Series", 
+                                            variable=self.series_var, 
+                                            command=lambda: ensure_selection(False))
+        self.series_check.grid(row=2, column=2, padx=10, sticky="e")
+
+        self.movies_var = tk.BooleanVar(value=True)
+        self.movies_check = ttk.Checkbutton(root, text="Movies", 
+                                            variable=self.movies_var,
+                                            command=lambda: ensure_selection(True))
+        self.movies_check.grid(row=2, column=2, padx=10, sticky="w")
+
+        # Random select button
         self.random_btn = ttk.Button(root, text="Select Random to Watch", command=self.select_random)
         self.random_btn.grid(row=2, column=3, padx=10, sticky="ew")
 
@@ -106,7 +120,8 @@ class MovieSelectorGUI:
             return pd.DataFrame(columns=self.columns)
         
         all_series = self.table['Title Type'].str.contains('Series', na=False)
-        table = self.table[all_series if self.series_var.get() else ~all_series]
+        series = self.series_var.get()
+        table = self.table[all_series if series else ~all_series] if series != self.movies_var.get() else self.table.copy()
         
         genre = self.genre_var.get()
         if genre != "Any":

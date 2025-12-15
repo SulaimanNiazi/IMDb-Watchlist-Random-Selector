@@ -12,9 +12,8 @@ class MovieSelectorGUI:
         self.table = None
 
         # Responsive grid
-        for i in range(4):
+        for i in range(5): 
             self.root.columnconfigure(i, weight=1)
-        for i in range(4):
             self.root.rowconfigure(i, weight=1)
         self.root.columnconfigure(1, weight=10)
         self.root.rowconfigure(3, weight=30)
@@ -36,8 +35,7 @@ class MovieSelectorGUI:
 
         # Series and Movie checkboxes
         def ensure_selection(movies = True):
-            if not self.series_var.get() and not self.movies_var.get():
-                self.series_var.set(True) if movies else self.movies_var.set(True)
+            if not self.series_var.get() and not self.movies_var.get(): self.series_var.set(True) if movies else self.movies_var.set(True)
         
         self.series_var = BooleanVar(value=True)
         self.series_check = Checkbutton(root, text="Series", variable=self.series_var, command=lambda:ensure_selection(False))
@@ -74,7 +72,8 @@ class MovieSelectorGUI:
         self.tree_scroll_y.config(command=self.tree.yview)
         self.tree_scroll_x.config(command=self.tree.xview)
 
-
+        self.count = Label(root, text="Count: 0", padx=10)
+        self.count.grid(row=4, column=0, sticky="ew")
 
         # Font for measuring column width
         style = Style()
@@ -88,12 +87,10 @@ class MovieSelectorGUI:
             for subPath in os.listdir(path):
                 if not subPath.startswith('.'):
                     newFiles = self.get_csv_files(os.path.join(path, subPath), files)
-                    if newFiles is not None and newFiles != files: 
-                        files.extend(newFiles)
+                    if newFiles is not None and newFiles != files: files.extend(newFiles)
         elif path.endswith('.csv'):
             abspath = os.path.abspath(path)
-            if abspath not in files:
-                files.append(abspath)
+            if abspath not in files: files.append(abspath)
         return files
 
     def load_watchlist(self, auto=True):
@@ -102,8 +99,7 @@ class MovieSelectorGUI:
                 title="Select Watchlist CSV", filetypes=[("CSV Files", "*.csv")], initialdir="."
             )]
 
-            if not paths:
-                raise FileNotFoundError("No CSV file found.")
+            if not paths: raise FileNotFoundError("No CSV file found.")
             self.table = pd.read_csv(paths[0])
             self.search_movie()
         except Exception as e:
@@ -122,16 +118,14 @@ class MovieSelectorGUI:
         self.genre_combo['values'] = self.genres
 
     def get_filtered_table(self):
-        if self.table is None:
-            return pd.DataFrame(columns=self.columns)
+        if self.table is None: return pd.DataFrame(columns=self.columns)
         
         all_series = self.table['Title Type'].str.contains('Series', na=False)
         series = self.series_var.get()
         table = self.table[all_series if series else ~all_series] if series != self.movies_var.get() else self.table.copy()
         
         genre = self.genre_var.get()
-        if genre != "Any":
-            table = table[table['Genres'].str.contains(genre, case=False, na=False)]
+        if genre != "Any": table = table[table['Genres'].str.contains(genre, case=False, na=False)]
         
         table = table[list(self.columns)].astype({'Year': 'string'}).fillna('N/A')
         table['Year'] = table['Year'].str.replace('.0', '', regex=False)
@@ -142,9 +136,10 @@ class MovieSelectorGUI:
 
     def update_table(self, table):
         self.tree.delete(*self.tree.get_children())
-        if not table.empty:
-            for _, row in table.iterrows():
-                self.tree.insert("", "end", values=tuple(row))
+        if table.empty:
+            messagebox.showinfo("No Entries Found", "Try a different search or genre.")
+        else:
+            for _, row in table.iterrows(): self.tree.insert("", "end", values=tuple(row))
             # Auto-size columns
             for col in self.columns:
                 max_width = self.font.measure(col)
@@ -153,24 +148,18 @@ class MovieSelectorGUI:
                     max_width = max(max_width, cell_width)
                 final_width = max_width + 20
                 self.tree.column(col, minwidth=final_width, width=final_width)
-        else:
-            messagebox.showinfo("No Entries Found", "Try a different search or genre.")
+        self.count.config(text=f"Count: {len(table)}")
 
     def search_movie(self):
         matches = self.get_filtered_table()
         title = self.search_entry.get()
-        if title != "":
-            matches = matches[matches['Title'].str.contains(title, case=False, na=False)]
+        if title: matches = matches[matches['Title'].str.contains(title, case=False, na=False)]
         self.update_table(matches)
 
     def select_random(self):
         filtered_table = self.get_filtered_table()
         filtered_table = filtered_table[~filtered_table['Year'].str.contains('N/A', na=False)]
-        if not filtered_table.empty:
-            selection = filtered_table.sample(n=1)
-            self.update_table(selection)
-        else:
-            self.update_table(filtered_table)
+        self.update_table(filtered_table if filtered_table.empty() else filtered_table.sample(n=1))
 
 if __name__ == "__main__":
     root = Tk()

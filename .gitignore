@@ -1,3 +1,9 @@
-watchlist.csv
+# Directories
 .vscode/
 src/__pycache__
+build/
+dist/
+
+# Files
+watchlist.csv
+main.spec

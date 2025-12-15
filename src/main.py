@@ -1,7 +1,7 @@
 from tkinter import messagebox, filedialog, Label, Entry, Button, StringVar, BooleanVar, Checkbutton, Frame, Scrollbar, Tk
 from tkinter.ttk import Treeview, Style, Combobox
 import tkinter.font as tkfont
-import pandas as pd
+from pandas import read_csv, Series, DataFrame
 import os
 
 class MovieSelectorGUI:
@@ -100,7 +100,7 @@ class MovieSelectorGUI:
             )]
 
             if not paths: raise FileNotFoundError("No CSV file found.")
-            self.table = pd.read_csv(paths[0])
+            self.table = read_csv(paths[0])
             self.search_movie()
         except Exception as e:
             self.table = None
@@ -113,12 +113,12 @@ class MovieSelectorGUI:
 
         # Extract unique genres
         self.genres = ["Any"] + sorted(
-            pd.Series([g.strip() for sublist in self.table['Genres'].dropna().str.split(',') for g in sublist]).unique()
+            Series([g.strip() for sublist in self.table['Genres'].dropna().str.split(',') for g in sublist]).unique()
         )
         self.genre_combo['values'] = self.genres
 
     def get_filtered_table(self):
-        if self.table is None: return pd.DataFrame(columns=self.columns)
+        if self.table is None: return DataFrame(columns=self.columns)
         
         all_series = self.table['Title Type'].str.contains('Series', na=False)
         series = self.series_var.get()

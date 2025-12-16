@@ -1,8 +1,8 @@
-from tkinter import messagebox, filedialog, Label, Entry, Button, StringVar, BooleanVar, Checkbutton, Frame, Scrollbar, Tk
+from tkinter import messagebox, filedialog, Label, Entry, Button, StringVar, BooleanVar, Checkbutton, Frame, Scrollbar, Tk, font
 from tkinter.ttk import Treeview, Style, Combobox
-import tkinter.font as tkfont
 from pandas import read_csv, Series, DataFrame
-import os
+from os import listdir
+from os.path import isdir, join, abspath
 
 class MovieSelectorGUI:
     def __init__(self, root):
@@ -20,17 +20,17 @@ class MovieSelectorGUI:
         self.root.minsize(700, 400)
 
         # Search section
-        Label(root, text="Search Title:").grid(row=1, column=0, padx=10, sticky="ew")
-        self.search_entry = Entry(root)
+        Label(self.root, text="Search Title:").grid(row=1, column=0, padx=10, sticky="ew")
+        self.search_entry = Entry(self.root)
         self.search_entry.grid(row=1, column=1, padx=10, sticky="ew")
         self.search_entry.bind("<Return>", lambda event: self.search_movie())
-        self.search_btn = Button(root, text="Search", command=self.search_movie)
+        self.search_btn = Button(self.root, text="Search", command=self.search_movie)
         self.search_btn.grid(row=1, column=2, columnspan=2, padx=10, sticky="ew")
 
         # Genre dropdown
-        Label(root, text="Genre:").grid(row=2, column=0, padx=10, sticky="ew")
+        Label(self.root, text="Genre:").grid(row=2, column=0, padx=10, sticky="ew")
         self.genre_var = StringVar(value="Any")
-        self.genre_combo = Combobox(root, textvariable=self.genre_var, state="readonly")
+        self.genre_combo = Combobox(self.root, textvariable=self.genre_var, state="readonly")
         self.genre_combo.grid(row=2, column=1, padx=10, sticky="ew")
 
         # Series and Movie checkboxes
@@ -38,22 +38,22 @@ class MovieSelectorGUI:
             if not self.series_var.get() and not self.movies_var.get(): self.series_var.set(True) if movies else self.movies_var.set(True)
         
         self.series_var = BooleanVar(value=True)
-        self.series_check = Checkbutton(root, text="Series", variable=self.series_var, command=lambda:ensure_selection(False))
+        self.series_check = Checkbutton(self.root, text="Series", variable=self.series_var, command=lambda:ensure_selection(False))
         self.series_check.grid(row=2, column=2, padx=10, sticky="ew")
 
         self.movies_var = BooleanVar(value=True)
-        self.movies_check = Checkbutton(root, text="Movies", variable=self.movies_var, command=lambda:ensure_selection(True))
+        self.movies_check = Checkbutton(self.root, text="Movies", variable=self.movies_var, command=lambda:ensure_selection(True))
         self.movies_check.grid(row=2, column=3, padx=10, sticky="ew")
 
         # Load New Watchlist and Select Random to Watch buttons
-        self.random_btn = Button(root, text="Load New Watchlist", command=lambda:self.load_watchlist(auto=False))
+        self.random_btn = Button(self.root, text="Load New Watchlist", command=lambda:self.load_watchlist(auto=False))
         self.random_btn.grid(row=1, column=4, padx=10, sticky="ew")
 
-        self.random_btn = Button(root, text="Select Random to Watch", command=self.select_random)
+        self.random_btn = Button(self.root, text="Select Random to Watch", command=self.select_random)
         self.random_btn.grid(row=2, column=4, padx=10, sticky="ew")
 
         # Table output
-        self.tree_frame = Frame(root)
+        self.tree_frame = Frame(self.root)
         self.tree_frame.grid(row=3, column=0, columnspan=5, padx=10, pady=10, sticky="nsew")
         self.tree_frame.rowconfigure(0, weight=1)
         self.tree_frame.columnconfigure(0, weight=1)
@@ -72,25 +72,25 @@ class MovieSelectorGUI:
         self.tree_scroll_y.config(command=self.tree.yview)
         self.tree_scroll_x.config(command=self.tree.xview)
 
-        self.count = Label(root, text="Count: 0", padx=10)
+        self.count = Label(self.root, text="Count: 0", padx=10)
         self.count.grid(row=4, column=0, sticky="ew")
 
         # Font for measuring column width
         style = Style()
         treeview_font = style.lookup("Treeview", "font") or "TkDefaultFont"
-        self.font = tkfont.nametofont(treeview_font)
+        self.font = font.nametofont(treeview_font)
 
         self.load_watchlist()
 
     def get_csv_files(self, path='.', files=[]):
-        if os.path.isdir(path):
-            for subPath in os.listdir(path):
+        if isdir(path):
+            for subPath in listdir(path):
                 if not subPath.startswith('.'):
-                    newFiles = self.get_csv_files(os.path.join(path, subPath), files)
+                    newFiles = self.get_csv_files(join(path, subPath), files)
                     if newFiles is not None and newFiles != files: files.extend(newFiles)
         elif path.endswith('.csv'):
-            abspath = os.path.abspath(path)
-            if abspath not in files: files.append(abspath)
+            abs = abspath(path)
+            if abs not in files: files.append(abs)
         return files
 
     def load_watchlist(self, auto=True):

@@ -1,15 +1,19 @@
 from tkinter import messagebox, filedialog, Label, Entry, Button, StringVar, BooleanVar, Checkbutton, Frame, Scrollbar, Tk, font
 from tkinter.ttk import Treeview, Style, Combobox
 from pandas import read_csv, Series, DataFrame
-from os import listdir
 from os.path import isdir, join, abspath
+import os, sys
 
 class MovieSelectorGUI:
     def __init__(self, root):
         self.root = root
-        self.root.title("Watchlist Movie Selector")
+        self.root.title("Watchlist Random Selector")
         self.columns = ("Title", "Title Type", "Year", "Genres")
         self.table = None
+
+        resource_path = lambda relative_path: join(sys._MEIPASS if hasattr(sys, "_MEIPASS") else abspath("."), relative_path)
+        icon_path = resource_path("icon.ico")
+        root.iconbitmap(icon_path)
 
         # Responsive grid
         for i in range(5): 
@@ -84,7 +88,7 @@ class MovieSelectorGUI:
 
     def get_csv_files(self, path='.', files=[]):
         if isdir(path):
-            for subPath in listdir(path):
+            for subPath in os.listdir(path):
                 if not subPath.startswith('.'):
                     newFiles = self.get_csv_files(join(path, subPath), files)
                     if newFiles is not None and newFiles != files: files.extend(newFiles)

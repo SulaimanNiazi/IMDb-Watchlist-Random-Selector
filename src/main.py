@@ -11,7 +11,7 @@ class MovieSelectorGUI:
         self.columns = ("Title", "Title Type", "Year", "Genres")
         self.table = None
 
-        resource_path = lambda relative_path: join(sys._MEIPASS if hasattr(sys, "_MEIPASS") else abspath("."), relative_path)
+        resource_path = lambda relative_path: join(sys._MEIPASS if hasattr(sys, "_MEIPASS") else abspath("src"), relative_path)
         icon_path = resource_path("icon.ico")
         root.iconbitmap(icon_path)
 
@@ -163,7 +163,7 @@ class MovieSelectorGUI:
     def select_random(self):
         filtered_table = self.get_filtered_table()
         filtered_table = filtered_table[~filtered_table['Year'].str.contains('N/A', na=False)]
-        self.update_table(filtered_table if filtered_table.empty() else filtered_table.sample(n=1))
+        self.update_table(filtered_table if filtered_table.empty else filtered_table.sample(n=1))
 
 if __name__ == "__main__":
     root = Tk()

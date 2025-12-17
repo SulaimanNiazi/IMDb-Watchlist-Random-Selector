@@ -1,4 +1,4 @@
-import PyInstaller.__main__
+import PyInstaller.__main__, os
 
 PyInstaller.__main__.run([
     "src/main.py",
@@ -8,3 +8,5 @@ PyInstaller.__main__.run([
     "--add-data","src/icon.ico;.",
     "--clean",
 ])
+
+os.rename("dist/main.exe", "dist/Watchlist Random Selector.exe")

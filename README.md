@@ -4,7 +4,7 @@
 
 It is designed for users who want a quick and convenient way to decide *what to watch next* based on genres, title type, or search terms.
 
-The complete [application (.exe file)](./dist/Watchlist%20Random%20Selector.exe) is in the dist directory.
+You can [click here to download the application (.exe file)](https://github.com/SulaimanNiazi/IMDb-Watchlist-Random-Selector/raw/refs/heads/main/dist/Watchlist%20Random%20Selector.exe) or you can find it in the [dist directory](./dist/).
 
 ---
 

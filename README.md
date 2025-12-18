@@ -4,6 +4,8 @@
 
 It is designed for users who want a quick and convenient way to decide *what to watch next* based on genres, title type, or search terms.
 
+The complete [application (.exe file)](./dist/Watchlist%20Random%20Selector.exe) is in the dist directory.
+
 ---
 
 ## Features

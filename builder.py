@@ -1,3 +1,6 @@
+INPUT = "dist/main.exe"
+OUTPUT = "dist/Watchlist Random Selector.exe"
+
 import PyInstaller.__main__, os
 
 PyInstaller.__main__.run([
@@ -9,4 +12,5 @@ PyInstaller.__main__.run([
     "--clean",
 ])
 
-os.rename("dist/main.exe", "dist/Watchlist Random Selector.exe")
+if os.path.exists(OUTPUT): os.remove(OUTPUT)
+os.rename(INPUT, OUTPUT)

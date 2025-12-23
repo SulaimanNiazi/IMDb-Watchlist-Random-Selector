@@ -75,6 +75,9 @@ class MovieSelectorGUI:
         self.tree.grid(row=0, column=0, sticky="nsew")
         self.tree_scroll_y.config(command=self.tree.yview)
         self.tree_scroll_x.config(command=self.tree.xview)
+        
+        self.tree.tag_configure("odd", background="#d3d3d3")
+        self.tree.tag_configure("even", background="#aaaaaa")
 
         self.count = Label(self.root, text="Count: 0", padx=10)
         self.count.grid(row=4, column=0, sticky="ew")
@@ -136,6 +139,7 @@ class MovieSelectorGUI:
         table = table.assign(
             SortKey=table['Title'].str.startswith(('[', ']', '(', ')', '{', '}')).map({True: 0, False: 1})
         ).sort_values(by=['SortKey', 'Title']).drop(columns=['SortKey'])
+
         return table
 
     def update_table(self, table):
@@ -144,14 +148,17 @@ class MovieSelectorGUI:
             messagebox.showinfo("No Entries Found", "Try a different search or genre.")
         else:
             for _, row in table.iterrows(): self.tree.insert("", "end", values=tuple(row))
+            
             # Auto-size columns
             for col in self.columns:
                 max_width = self.font.measure(col)
-                for item in self.tree.get_children():
-                    cell_width = self.font.measure(str(self.tree.set(item, col)))
+                for ind, id in enumerate(self.tree.get_children()):
+                    cell_width = self.font.measure(str(self.tree.set(id, col)))
                     max_width = max(max_width, cell_width)
+                    self.tree.item(id, tags=("odd" if ind % 2 else "even",))
                 final_width = max_width + 20
                 self.tree.column(col, minwidth=final_width, width=final_width)
+
         self.count.config(text=f"Count: {len(table)}")
 
     def search_movie(self):

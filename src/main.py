@@ -1,4 +1,4 @@
-from tkinter import messagebox, filedialog, Label, Entry, Button, StringVar, BooleanVar, Checkbutton, Frame, Scrollbar, Tk, font
+from tkinter import messagebox, filedialog, Label, Entry, Button, StringVar, BooleanVar, Checkbutton, Frame, Scrollbar, Tk, font, Event
 from tkinter.ttk import Treeview, Style, Combobox
 from pandas import read_csv, Series, DataFrame
 from os.path import isdir, join, abspath
@@ -8,7 +8,6 @@ import sys
 class MovieSelectorGUI:
     def __init__(self, root:Tk):
         root.title("Watchlist Random Selector")
-        self.columns = ("Title", "Year", "Title Type", "Genres")
         self.data = None
 
         resource_path = lambda relative_path: join(sys._MEIPASS if hasattr(sys, "_MEIPASS") else abspath("src"), relative_path)
@@ -54,17 +53,35 @@ class MovieSelectorGUI:
         tree_frame.grid(row=3, column=0, columnspan=5, padx=10, pady=10, sticky="nsew")
         tree_frame.rowconfigure(0, weight=1)
         tree_frame.columnconfigure(0, weight=1)
+
         tree_scroll_y = Scrollbar(tree_frame, orient="vertical")
         tree_scroll_y.grid(row=0, column=1, sticky="ns")
         tree_scroll_x = Scrollbar(tree_frame, orient="horizontal")
         tree_scroll_x.grid(row=1, column=0, sticky="ew")
+        self.columns = ("Title", "Year", "Title Type", "Genres", "IMDb Rating", "Runtime (mins)")
+        self.sort_setting = [self.columns[0], True]
         self.table = Treeview(tree_frame, columns=self.columns, show="headings", yscrollcommand=tree_scroll_y.set, xscrollcommand=tree_scroll_x.set)
+        
         for col in self.columns:
             self.table.heading(col, text=col)
             self.table.column(col, anchor="w")
         self.table.grid(row=0, column=0, sticky="nsew")
         tree_scroll_y.config(command=self.table.yview)
         tree_scroll_x.config(command=self.table.xview)
+
+        sort_text = Label(root, text=f"Sorted according to {self.columns[0]} in ascending order")
+        sort_text.grid(row=4, column=1, sticky="w")
+
+        def on_double_click(event:Event):
+            region = self.table.identify("region", event.x, event.y)
+            if region == "heading":
+                col = self.table.identify_column(event.x)
+                heading = self.table.heading(col, "text")
+                if heading == self.sort_setting[0]: self.sort_setting[1] = not self.sort_setting[1]
+                else: self.sort_setting = [heading, True]
+                self.search_movie()
+                sort_text.config(text=f"Sorted according to {heading} in {"ascending" if self.sort_setting[1] else "descending"} order")
+        self.table.bind("<Double-1>", on_double_click)
         
         self.table.tag_configure("odd", background="#d3d3d3")
         self.table.tag_configure("even", background="#aaaaaa")
@@ -105,24 +122,32 @@ class MovieSelectorGUI:
                 self.load_watchlist()
             return
         
-        self.search_movie()
+        self.data = self.data.astype("string").fillna("N/A")
+        self.data["Year"] = self.data["Year"].str.replace(".0", "")
+        
         self.genre_combo["values"] = ["Any"] + sorted(Series([g.strip() for sublist in self.data["Genres"].dropna().str.split(",") for g in sublist]).unique())
+        self.search_movie()
 
     def get_filtered_table(self):
         if self.data is None: return DataFrame(columns=self.columns)
+        table = self.data[list(self.columns)]
         
-        all_series = self.data["Title Type"].str.contains("Series", na=False)
         series = self.series_var.get()
-        table = self.data[all_series if series else ~all_series] if series != self.movies_var.get() else self.data.copy()
-        
+        if series ^ self.movies_var.get():
+            all_series = self.data["Title Type"].str.contains("Series", na=False)
+            table = table[all_series if series else ~all_series]
+
         genre = self.genre_var.get()
         if genre != "Any": table = table[table["Genres"].str.contains(genre, case=False, na=False)]
-        
-        table = table[list(self.columns)].astype({"Year": "string"}).fillna("N/A")
-        table["Year"] = table["Year"].str.replace(".0", "", regex=False)
-        table = table.assign(SortKey=table["Title"].str.startswith(("[", "]", "(", ")", "{", "}")).map({True: 0, False: 1})).sort_values(by=["SortKey", "Title"]).drop(columns=["SortKey"])
 
-        return table
+        if   self.sort_setting[0] == "Title":       least = ("[", "]", "(", ")", "{", "}")
+        elif self.sort_setting[0] == "IMDb Rating": least = "N/A"
+        elif self.sort_setting[0] == "Year":        least = ("1", "2")
+        elif self.sort_setting[0] == "Runtime (mins)":
+            table.loc[:, "Runtime (mins)"] = table["Runtime (mins)"].replace("N/A", None)
+            return table.astype({"Runtime (mins)": "float64"}).sort_values("Runtime (mins)", ascending=self.sort_setting[1]).astype("string").fillna("N/A")
+        else: return table.sort_values(self.sort_setting[0], ascending=self.sort_setting[1])
+        return table.assign(SortKey=table[self.sort_setting[0]].str.startswith(least).map({True: 0, False: 1})).sort_values(["SortKey", self.sort_setting[0]], ascending=self.sort_setting[1]).drop(columns=["SortKey"])
 
     def update_table(self, table:DataFrame):
         self.table.delete(*self.table.get_children())

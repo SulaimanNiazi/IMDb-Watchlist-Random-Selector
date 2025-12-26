@@ -71,17 +71,14 @@ class MovieSelectorGUI:
 
         self.table.grid(row=0, column=0, sticky="nsew")
 
-        sort_text = Label(root, text=f"Sorted according to {self.columns[0]} in ascending order")
-        sort_text.grid(row=4, column=1, sticky="w")
-
         def on_double_click(event:Event):
             region = self.table.identify("region", event.x, event.y)
             if region == "heading":
                 heading = self.table.heading(self.table.identify_column(event.x), "text")
                 if heading == self.sort_setting[0]: self.sort_setting[1] = not self.sort_setting[1]
-                else: self.sort_setting = [heading, True]
+                else: self.sort_setting = [heading, heading != "IMDb Rating"]
                 self.search_movie()
-                sort_text.config(text=f"Sorted according to {heading} in {"ascending" if self.sort_setting[1] else "descending"} order")
+                self.sort_text.config(text=f"Sorted according to {heading} in {"ascending" if self.sort_setting[1] else "descending"} order")
             
             elif region == "cell":
                 url = self.table.set(self.table.identify_row(event.y))["URL"]
@@ -94,8 +91,12 @@ class MovieSelectorGUI:
         self.table.tag_configure("odd", background="#d3d3d3")
         self.table.tag_configure("even", background="#aaaaaa")
 
+        # Bottom text
         self.count = Label(root, text="Count: 0", padx=10)
         self.count.grid(row=4, column=0, sticky="ew")
+
+        self.sort_text = Label(root, text=f"Sorted according to Title in ascending order")
+        self.sort_text.grid(row=4, column=1, sticky="w")
 
         # Font for measuring column width
         style = Style()
@@ -148,14 +149,22 @@ class MovieSelectorGUI:
         genre = self.genre_var.get()
         if genre != "Any": table = table[table["Genres"].str.contains(genre, case=False, na=False)]
 
-        if   self.sort_setting[0] == "Title":       least = ("[", "]", "(", ")", "{", "}")
-        elif self.sort_setting[0] == "IMDb Rating": least = "N/A"
-        elif self.sort_setting[0] == "Year":        least = ("1", "2")
-        elif self.sort_setting[0] == "Runtime (mins)":
-            table.loc[:, "Runtime (mins)"] = table["Runtime (mins)"].replace("N/A", None)
-            return table.astype({"Runtime (mins)": "float64"}).sort_values("Runtime (mins)", ascending=self.sort_setting[1]).astype("string").fillna("N/A")
-        else: return table.sort_values(self.sort_setting[0], ascending=self.sort_setting[1])
-        return table.assign(SortKey=table[self.sort_setting[0]].str.startswith(least).map({True: 0, False: 1})).sort_values(["SortKey", self.sort_setting[0]], ascending=self.sort_setting[1]).drop(columns=["SortKey"])
+        if self.sort_setting[0] in ("Genres", "Title Type"):
+            genres = list(table[self.sort_setting[0]])
+            SortKey = [genres.count(g) for g in genres]
+        else:
+            if   self.sort_setting[0] == "Title":       least = ("[", "]", "(", ")", "{", "}")
+            elif self.sort_setting[0] == "IMDb Rating": least = "N/A"
+            elif self.sort_setting[0] == "Year":        least = ("1", "2")
+            
+            elif self.sort_setting[0] == "Runtime (mins)":
+                table.loc[:, "Runtime (mins)"] = table["Runtime (mins)"].replace("N/A", None)
+                return table.astype({"Runtime (mins)": "float64"}).sort_values("Runtime (mins)", ascending=self.sort_setting[1]).astype("string").fillna("N/A")
+            
+            else: return table.sort_values(self.sort_setting[0], ascending=self.sort_setting[1])
+            
+            SortKey = table[self.sort_setting[0]].str.startswith(least).map({True: 0, False: 1})
+        return table.assign(SortKey=SortKey).sort_values(["SortKey", self.sort_setting[0]], ascending=self.sort_setting[1]).drop(columns=["SortKey"])
 
     def update_table(self, table:DataFrame):
         self.table.delete(*self.table.get_children())

@@ -54,20 +54,22 @@ class MovieSelectorGUI:
         tree_frame.rowconfigure(0, weight=1)
         tree_frame.columnconfigure(0, weight=1)
 
+        self.columns = ["Title", "Year", "Title Type", "Genres", "IMDb Rating", "Runtime (mins)", "URL"]
+        self.sort_setting = [self.columns[0], True]
         tree_scroll_y = Scrollbar(tree_frame, orient="vertical")
         tree_scroll_y.grid(row=0, column=1, sticky="ns")
         tree_scroll_x = Scrollbar(tree_frame, orient="horizontal")
         tree_scroll_x.grid(row=1, column=0, sticky="ew")
-        self.columns = ("Title", "Year", "Title Type", "Genres", "IMDb Rating", "Runtime (mins)")
-        self.sort_setting = [self.columns[0], True]
         self.table = Treeview(tree_frame, columns=self.columns, show="headings", yscrollcommand=tree_scroll_y.set, xscrollcommand=tree_scroll_x.set)
-        
-        for col in self.columns:
-            self.table.heading(col, text=col)
-            self.table.column(col, anchor="w")
-        self.table.grid(row=0, column=0, sticky="nsew")
         tree_scroll_y.config(command=self.table.yview)
         tree_scroll_x.config(command=self.table.xview)
+
+        for col in self.columns[:-1]:
+            self.table.heading(col, text=col)
+            self.table.column(col, anchor="w")
+        self.table.column(self.columns[-1], width=0, stretch=False)
+
+        self.table.grid(row=0, column=0, sticky="nsew")
 
         sort_text = Label(root, text=f"Sorted according to {self.columns[0]} in ascending order")
         sort_text.grid(row=4, column=1, sticky="w")
@@ -75,12 +77,18 @@ class MovieSelectorGUI:
         def on_double_click(event:Event):
             region = self.table.identify("region", event.x, event.y)
             if region == "heading":
-                col = self.table.identify_column(event.x)
-                heading = self.table.heading(col, "text")
+                heading = self.table.heading(self.table.identify_column(event.x), "text")
                 if heading == self.sort_setting[0]: self.sort_setting[1] = not self.sort_setting[1]
                 else: self.sort_setting = [heading, True]
                 self.search_movie()
                 sort_text.config(text=f"Sorted according to {heading} in {"ascending" if self.sort_setting[1] else "descending"} order")
+            
+            elif region == "cell":
+                url = self.table.set(self.table.identify_row(event.y))["URL"]
+                root.clipboard_clear()
+                root.clipboard_append(url)
+                messagebox.showinfo("Copied to Clipboard", url)
+
         self.table.bind("<Double-1>", on_double_click)
         
         self.table.tag_configure("odd", background="#d3d3d3")
@@ -130,7 +138,7 @@ class MovieSelectorGUI:
 
     def get_filtered_table(self):
         if self.data is None: return DataFrame(columns=self.columns)
-        table = self.data[list(self.columns)]
+        table = self.data[self.columns]
         
         series = self.series_var.get()
         if series ^ self.movies_var.get():
@@ -156,7 +164,7 @@ class MovieSelectorGUI:
             for _, row in table.iterrows(): self.table.insert("", "end", values=tuple(row))
             
             # Auto-size columns
-            for col in self.columns:
+            for col in self.columns[:-1]:
                 max_width = self.font.measure(col)
                 for ind, id in enumerate(self.table.get_children()):
                     cell_width = self.font.measure(str(self.table.set(id, col)))

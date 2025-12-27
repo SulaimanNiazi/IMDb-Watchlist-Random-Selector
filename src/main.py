@@ -8,7 +8,6 @@ import sys
 class MovieSelectorGUI:
     def __init__(self, root:Tk):
         root.title("Watchlist Random Selector")
-        root.maxsize(root.winfo_screenwidth(), root.winfo_screenheight())
         self.data = None
 
         resource_path = lambda relative_path: join(sys._MEIPASS if hasattr(sys, "_MEIPASS") else abspath("src"), relative_path)
@@ -22,6 +21,7 @@ class MovieSelectorGUI:
         root.columnconfigure(1, weight=10)
         root.rowconfigure(3, weight=30)
         root.minsize(700, 400)
+        root.maxsize(root.winfo_screenwidth(), root.winfo_screenheight())
 
         # Search section
         Label(root, text="Search Title:").grid(row=1, column=0, padx=10, sticky="ew")
@@ -55,7 +55,7 @@ class MovieSelectorGUI:
         tree_frame.rowconfigure(0, weight=1)
         tree_frame.columnconfigure(0, weight=1)
 
-        self.columns = ["Title", "Year", "Title Type", "Genres", "IMDb Rating", "Runtime (mins)", "URL"]
+        self.columns = ["Title", "Year", "Title Type", "Genres", "IMDb Rating", "Runtime", "URL"]
         self.sort_setting = ["Title", True]
         tree_scroll_y = Scrollbar(tree_frame, orient="vertical")
         tree_scroll_y.grid(row=0, column=1, sticky="ns")
@@ -68,7 +68,7 @@ class MovieSelectorGUI:
         for col in self.columns[:-1]:
             self.table.heading(col, text=col)
             self.table.column(col, anchor="w")
-        self.table.column(self.columns[-1], width=0, stretch=False)
+        self.table.column("URL", width=0, stretch=False)
 
         self.table.grid(row=0, column=0, sticky="nsew")
 
@@ -101,9 +101,9 @@ class MovieSelectorGUI:
 
         # Font for measuring column width
         style = Style()
-        style.configure("Treeview", rowheight=30)
         treeview_font = style.lookup("Treeview", "font") or "TkDefaultFont"
         self.font = font.nametofont(treeview_font)
+        style.configure("Treeview", rowheight=30)
 
         self.load_watchlist()
 
@@ -123,6 +123,7 @@ class MovieSelectorGUI:
             paths = self.get_csv_files() if auto else [filedialog.askopenfilename(title="Select Watchlist CSV", filetypes=[("CSV Files", "*.csv")], initialdir=".")]
             if not paths: raise FileNotFoundError("No CSV file found.")
             self.data = read_csv(paths[0])
+            self.data = self.data.rename(columns={"Runtime (mins)": "Runtime"})
         
         except Exception as e:
             self.data = None
@@ -138,8 +139,14 @@ class MovieSelectorGUI:
             if t[0] in t[1]: return t[1]
             elif t[1] in t[0]: return t[0]
             else: return f"{t[1]}\n{t[0]}"
-        self.data["Title"] = self.data[["Title", "Original Title"]].apply(better_title, 1)
+        def to_time(t):
+            try:
+                m = int(t)
+                t = f"{int(m/60):02d}:{m%60:02d}"
+            finally: return t
 
+        self.data["Title"] = self.data[["Title", "Original Title"]].apply(better_title, 1)
+        self.data["Runtime"] = self.data["Runtime"].apply(to_time, 1)
         self.data = self.data.astype("string").fillna("N/A")
         self.data["Year"] = self.data["Year"].str.replace(".0", "")
         self.genres["values"] = ["Any"] + sorted(Series([g.strip() for sublist in self.data["Genres"].dropna().str.split(",") for g in sublist]).unique())
@@ -162,13 +169,11 @@ class MovieSelectorGUI:
             genres = list(table[self.sort_setting[0]])
             SortKey = [genres.count(g) for g in genres]
         else:
-            if   self.sort_setting[0] == "Title":       least = ("[", "]", "(", ")", "{", "}")
-            elif self.sort_setting[0] == "IMDb Rating": least = "N/A"
-            elif self.sort_setting[0] == "Year":        least = ("1", "2")
-            
-            elif self.sort_setting[0] == "Runtime (mins)":
-                table.loc[:, "Runtime (mins)"] = table["Runtime (mins)"].replace("N/A", None)
-                return table.astype({"Runtime (mins)": "float64"}).sort_values("Runtime (mins)", ascending=self.sort_setting[1]).astype("string").fillna("N/A")
+            nums = ("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")
+            if   self.sort_setting[0] == "Title":           least = ("[", "]", "(", ")", "{", "}")
+            elif self.sort_setting[0] == "IMDb Rating":     least = "N/A"
+            elif self.sort_setting[0] == "Year":            least = nums
+            elif self.sort_setting[0] == "Runtime":  least = nums if self.sort_setting[1] else "N/A"
             
             else: return table.sort_values(self.sort_setting[0], ascending=self.sort_setting[1])
             

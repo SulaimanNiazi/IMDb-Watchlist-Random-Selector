@@ -8,6 +8,7 @@ import sys
 class MovieSelectorGUI:
     def __init__(self, root:Tk):
         root.title("Watchlist Random Selector")
+        root.maxsize(root.winfo_screenwidth(), root.winfo_screenheight())
         self.data = None
 
         resource_path = lambda relative_path: join(sys._MEIPASS if hasattr(sys, "_MEIPASS") else abspath("src"), relative_path)
@@ -32,8 +33,8 @@ class MovieSelectorGUI:
         # Genre dropdown
         Label(root, text="Genre:").grid(row=2, column=0, padx=10, sticky="ew")
         self.genre_var = StringVar(value="Any")
-        self.genre_combo = Combobox(root, textvariable=self.genre_var, state="readonly")
-        self.genre_combo.grid(row=2, column=1, padx=10, sticky="ew")
+        self.genres = Combobox(root, textvariable=self.genre_var, state="readonly")
+        self.genres.grid(row=2, column=1, padx=10, sticky="ew")
 
         # Series and Movie checkboxes
         def ensure_selection(movies = True):
@@ -100,6 +101,7 @@ class MovieSelectorGUI:
 
         # Font for measuring column width
         style = Style()
+        style.configure("Treeview", rowheight=30)
         treeview_font = style.lookup("Treeview", "font") or "TkDefaultFont"
         self.font = font.nametofont(treeview_font)
 
@@ -135,12 +137,12 @@ class MovieSelectorGUI:
             t = list(t)
             if t[0] in t[1]: return t[1]
             elif t[1] in t[0]: return t[0]
-            else: return f"{t[1]} ({t[0]})"
+            else: return f"{t[1]}\n{t[0]}"
         self.data["Title"] = self.data[["Title", "Original Title"]].apply(better_title, 1)
 
         self.data = self.data.astype("string").fillna("N/A")
         self.data["Year"] = self.data["Year"].str.replace(".0", "")
-        self.genre_combo["values"] = ["Any"] + sorted(Series([g.strip() for sublist in self.data["Genres"].dropna().str.split(",") for g in sublist]).unique())
+        self.genres["values"] = ["Any"] + sorted(Series([g.strip() for sublist in self.data["Genres"].dropna().str.split(",") for g in sublist]).unique())
         
         self.search_movie()
 
@@ -183,7 +185,11 @@ class MovieSelectorGUI:
             for col in self.columns[:-1]:
                 max_width = self.font.measure(col)
                 for ind, id in enumerate(self.table.get_children()):
-                    cell_width = self.font.measure(str(self.table.set(id, col)))
+                    text = str(self.table.set(id, col))
+                    if text.__contains__('\n'):
+                        texts = text.split('\n')
+                        text = texts[int(len(texts[0]) < len(texts[1]))]
+                    cell_width = self.font.measure(text)
                     max_width = max(max_width, cell_width)
                     self.table.item(id, tags=("odd" if ind % 2 else "even",))
                 final_width = max_width + 20

@@ -123,7 +123,7 @@ class MovieSelectorGUI:
             paths = self.get_csv_files() if auto else [filedialog.askopenfilename(title="Select Watchlist CSV", filetypes=[("CSV Files", "*.csv")], initialdir=".")]
             if not paths: raise FileNotFoundError("No CSV file found.")
             self.data = read_csv(paths[0])
-            self.data = self.data.rename(columns={"Runtime (mins)": "Runtime"})
+            self.data = self.data.rename(columns={"Runtime (mins)": "Runtime"}).astype("string").fillna("N/A")
         
         except Exception as e:
             self.data = None
@@ -134,20 +134,20 @@ class MovieSelectorGUI:
                 self.load_watchlist()
             return
         
-        def better_title(t):
+        def merge_titles(t:Series):
             t = list(t)
             if t[0] in t[1]: return t[1]
             elif t[1] in t[0]: return t[0]
             else: return f"{t[1]}\n{t[0]}"
-        def to_time(t):
+        def mins_to_time(t:Series):
+            t = t.values[0]
             try:
-                m = int(t)
+                m = int(float(t))
                 t = f"{int(m/60):02d}:{m%60:02d}"
             finally: return t
 
-        self.data["Title"] = self.data[["Title", "Original Title"]].apply(better_title, 1)
-        self.data["Runtime"] = self.data["Runtime"].apply(to_time, 1)
-        self.data = self.data.astype("string").fillna("N/A")
+        self.data["Title"] = self.data[["Title", "Original Title"]].apply(merge_titles, 1)
+        self.data["Runtime"] = self.data[["Runtime"]].apply(mins_to_time, 1)
         self.data["Year"] = self.data["Year"].str.replace(".0", "")
         self.genres["values"] = ["Any"] + sorted(Series([g.strip() for sublist in self.data["Genres"].dropna().str.split(",") for g in sublist]).unique())
         
@@ -170,10 +170,10 @@ class MovieSelectorGUI:
             SortKey = [genres.count(g) for g in genres]
         else:
             nums = ("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")
-            if   self.sort_setting[0] == "Title":           least = ("[", "]", "(", ")", "{", "}")
-            elif self.sort_setting[0] == "IMDb Rating":     least = "N/A"
-            elif self.sort_setting[0] == "Year":            least = nums
-            elif self.sort_setting[0] == "Runtime":  least = nums if self.sort_setting[1] else "N/A"
+            if   self.sort_setting[0] == "Title":       least = ("[", "]", "(", ")", "{", "}")
+            elif self.sort_setting[0] == "IMDb Rating": least = "N/A"
+            elif self.sort_setting[0] == "Year":        least = nums
+            elif self.sort_setting[0] == "Runtime":     least = nums if self.sort_setting[1] else "N/A"
             
             else: return table.sort_values(self.sort_setting[0], ascending=self.sort_setting[1])
             

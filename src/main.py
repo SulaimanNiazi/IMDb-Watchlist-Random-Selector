@@ -55,7 +55,7 @@ class MovieSelectorGUI:
         tree_frame.columnconfigure(0, weight=1)
 
         self.columns = ["Title", "Year", "Title Type", "Genres", "IMDb Rating", "Runtime (mins)", "URL"]
-        self.sort_setting = [self.columns[0], True]
+        self.sort_setting = ["Title", True]
         tree_scroll_y = Scrollbar(tree_frame, orient="vertical")
         tree_scroll_y.grid(row=0, column=1, sticky="ns")
         tree_scroll_x = Scrollbar(tree_frame, orient="horizontal")
@@ -131,10 +131,17 @@ class MovieSelectorGUI:
                 self.load_watchlist()
             return
         
+        def better_title(t):
+            t = list(t)
+            if t[0] in t[1]: return t[1]
+            elif t[1] in t[0]: return t[0]
+            else: return f"{t[1]} ({t[0]})"
+        self.data["Title"] = self.data[["Title", "Original Title"]].apply(better_title, 1)
+
         self.data = self.data.astype("string").fillna("N/A")
         self.data["Year"] = self.data["Year"].str.replace(".0", "")
-        
         self.genre_combo["values"] = ["Any"] + sorted(Series([g.strip() for sublist in self.data["Genres"].dropna().str.split(",") for g in sublist]).unique())
+        
         self.search_movie()
 
     def get_filtered_table(self):

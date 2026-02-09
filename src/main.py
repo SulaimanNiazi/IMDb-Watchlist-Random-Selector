@@ -65,7 +65,7 @@ class MovieSelectorGUI:
         tree_scroll_y.config(command=self.table.yview)
         tree_scroll_x.config(command=self.table.xview)
 
-        for col in self.columns[:-1]:
+        for col in self.columns[:6]:
             self.table.heading(col, text=col)
             self.table.column(col, anchor="w")
         self.table.column("URL", width=0, stretch=False)
@@ -134,12 +134,12 @@ class MovieSelectorGUI:
                 self.load_watchlist()
             return
         
-        def merge_titles(t:Series):
+        def merge_titles(t:Series) -> str:
             t = list(t)
             if t[0] in t[1]: return t[1]
             elif t[1] in t[0]: return t[0]
             else: return f"{t[1]}\n{t[0]}"
-        def mins_to_time(t:Series):
+        def mins_to_time(t:Series) -> str:
             t = t.values[0]
             try:
                 m = int(float(t))
@@ -165,6 +165,8 @@ class MovieSelectorGUI:
         genre = self.genre_var.get()
         if genre != "Any": table = table[table["Genres"].str.contains(genre, case=False, na=False)]
 
+
+
         if self.sort_setting[0] in ("Genres", "Title Type"):
             genres = list(table[self.sort_setting[0]])
             SortKey = [genres.count(g) for g in genres]
@@ -187,7 +189,7 @@ class MovieSelectorGUI:
             for _, row in table.iterrows(): self.table.insert("", "end", values=tuple(row))
             
             # Auto-size columns
-            for col in self.columns[:-1]:
+            for col in self.columns[:6]:
                 max_width = self.font.measure(col)
                 for ind, id in enumerate(self.table.get_children()):
                     text = str(self.table.set(id, col))
@@ -202,14 +204,15 @@ class MovieSelectorGUI:
 
         self.count.config(text=f"Count: {len(table)}")
 
-    def search_movie(self):
+    def search_movie(self) -> DataFrame:
         matches = self.get_filtered_table()
         title = self.search_entry.get()
         if title: matches = matches[matches["Title"].str.contains(title, case=False, na=False)]
         self.update_table(matches)
+        return matches
 
     def select_random(self):
-        filtered_table = self.get_filtered_table()
+        filtered_table = self.search_movie()
         filtered_table = filtered_table[~filtered_table["Year"].str.contains("N/A", na=False)]
         self.update_table(filtered_table if filtered_table.empty else filtered_table.sample(n=1))
 

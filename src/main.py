@@ -2,6 +2,7 @@ from tkinter import messagebox, filedialog, Label, Entry, Button, StringVar, Boo
 from tkinter.ttk import Treeview, Style, Combobox
 from pandas import read_csv, Series, DataFrame
 from os.path import isdir, join, abspath
+from time import strptime, gmtime
 from os import listdir
 import sys
 
@@ -55,7 +56,7 @@ class MovieSelectorGUI:
         tree_frame.rowconfigure(0, weight=1)
         tree_frame.columnconfigure(0, weight=1)
 
-        self.columns = ["Title", "Year", "Title Type", "Genres", "IMDb Rating", "Runtime", "URL"]
+        self.columns = ["Title", "Release Date", "Title Type", "Genres", "IMDb Rating", "Runtime", "URL"]
         self.sort_setting = ["Title", True]
         tree_scroll_y = Scrollbar(tree_frame, orient="vertical")
         tree_scroll_y.grid(row=0, column=1, sticky="ns")
@@ -148,7 +149,6 @@ class MovieSelectorGUI:
 
         self.data["Title"] = self.data[["Title", "Original Title"]].apply(merge_titles, 1)
         self.data["Runtime"] = self.data[["Runtime"]].apply(mins_to_time, 1)
-        self.data["Year"] = self.data["Year"].str.replace(".0", "")
         self.genres["values"] = ["Any"] + sorted(Series([g.strip() for sublist in self.data["Genres"].dropna().str.split(",") for g in sublist]).unique())
         
         self.search_movie()
@@ -165,18 +165,13 @@ class MovieSelectorGUI:
         genre = self.genre_var.get()
         if genre != "Any": table = table[table["Genres"].str.contains(genre, case=False, na=False)]
 
-
-
         if self.sort_setting[0] in ("Genres", "Title Type"):
             genres = list(table[self.sort_setting[0]])
             SortKey = [genres.count(g) for g in genres]
         else:
-            nums = ("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")
             if   self.sort_setting[0] == "Title":       least = ("[", "]", "(", ")", "{", "}")
             elif self.sort_setting[0] == "IMDb Rating": least = "N/A"
-            elif self.sort_setting[0] == "Year":        least = nums
-            elif self.sort_setting[0] == "Runtime":     least = nums if self.sort_setting[1] else "N/A"
-            
+            elif self.sort_setting[0] == "Runtime":     least = ("0", "1", "2", "3", "4", "5", "6", "7", "8", "9") if self.sort_setting[1] else "N/A"
             else: return table.sort_values(self.sort_setting[0], ascending=self.sort_setting[1])
             
             SortKey = table[self.sort_setting[0]].str.startswith(least).map({True: 0, False: 1})
@@ -213,7 +208,8 @@ class MovieSelectorGUI:
 
     def select_random(self):
         filtered_table = self.search_movie()
-        filtered_table = filtered_table[~filtered_table["Year"].str.contains("N/A", na=False)]
+        today = gmtime()
+        filtered_table = filtered_table[(filtered_table["Release Date"].apply(lambda date: date.count('-') == 2 and today > strptime(date, "%Y-%m-%d")))]
         self.update_table(filtered_table if filtered_table.empty else filtered_table.sample(n=1))
 
 if __name__ == "__main__":

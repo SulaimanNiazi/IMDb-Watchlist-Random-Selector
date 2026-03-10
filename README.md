@@ -1,10 +1,16 @@
-# Watchlist Movie Selector
+# IMDb Watchlist Random Selector
 
-**Watchlist Movie Selector** is a Python desktop application built with **Tkinter** that helps you organize, filter, and randomly select movies or TV series from an **IMDb-exported watchlist CSV file**.
+**IMDb Watchlist Random Selector** is a Python desktop application built with **Tkinter** that helps you organize, filter, and randomly select movies or TV series from an **IMDb-exported watchlist CSV file**.
 
 It is designed for users who want a quick and convenient way to decide *what to watch next* based on genres, title type, or search terms.
 
-You can [click here to download the application (.exe file)](https://github.com/SulaimanNiazi/IMDb-Watchlist-Random-Selector/raw/refs/heads/main/dist/Watchlist%20Random%20Selector.exe) or you can find it in the [dist directory](./dist/).
+---
+
+## Download
+
+Pre-built Windows executables are available on the Releases page.
+
+⬇ **[Download the latest version](https://github.com/SulaimanNiazi/IMDb-Watchlist-Random-Selector/releases/latest/download/Watchlist.Random.Selector.exe)**
 
 ---
 
@@ -42,7 +48,7 @@ pip install -r requirements.txt
 
 ```bash
 git clone https://github.com/SulaimanNiazi/IMDb-Watchlist-Random-Selector.git
-cd watchlist-movie-selector
+cd IMDb-Watchlist-Random-Selector
 ```
 
 ### 2. Export Your IMDb Watchlist
@@ -56,7 +62,7 @@ cd watchlist-movie-selector
 ### 3. Run the Application
 
 ```bash
-python main.py
+python src/main.py
 ```
 
 ---
@@ -92,6 +98,6 @@ No manual editing of the CSV file is required.
 
 ## Note
 
-It is possible your local antivirus may not trust the .exe file at first, it is normal to see it scanned and then tolerated.
+It is possible your local antivirus may not trust the .exe file at first, it is normal to see it scanned and then accepted.
 
-If for some reason the antivirus flags the .exe file as dangerous, the code is available in [main.py](./src/main.py) and you can easily generate the exe file using [builder.py](builder.py).
+If for some reason the antivirus flags the .exe file as dangerous, the code is available in [main.py](./src/main.py), the requirements are available in the [requirements file](requirements.txt) and you can easily generate the executable file by running [pyinstaller](https://pyinstaller.org/en/stable/) on [main.spec](main.spec)
